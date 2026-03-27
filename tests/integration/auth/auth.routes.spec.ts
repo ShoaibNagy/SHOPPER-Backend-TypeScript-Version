@@ -2,6 +2,7 @@ import request from 'supertest';
 import mongoose from 'mongoose';
 import { createApp } from '../../../src/app';
 import { User } from '../../../src/modules/users/user.model';
+import { authLimiter } from '../../../src/shared/middleware/rateLimiter';
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
 jest.mock('../../../src/modules/users/user.model');
@@ -49,7 +50,12 @@ const mockSavedUser = {
 // ── Tests ─────────────────────────────────────────────────────────────────────
 describe('Auth routes', () => {
 
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(async () => {
+    jest.clearAllMocks();
+    // Reset the rate limiter store between tests so accumulated
+    // request counts from previous tests don't trigger a 429
+    await authLimiter.resetKey('::ffff:127.0.0.1');
+  });
 
   // ── POST /api/auth/signup ───────────────────────────────────────────────────
   describe('POST /api/auth/signup', () => {

@@ -75,9 +75,6 @@ const userSchema = new Schema<IUser>(
   },
 );
 
-// ── Indexes ──────────────────────────────────────────────────────────────────
-userSchema.index({ email: 1 }, { unique: true });
-
 // ── Pre-save hook: hash password only when it has been modified ──────────────
 userSchema.pre('save', async function (next) {
   if (!this.isModified('password')) return next();
