@@ -18,7 +18,7 @@ const init = (): void => {
   }
 
   stripeClient = new Stripe(env.stripe.secretKey, {
-    apiVersion: '2024-04-10',
+    apiVersion: '2026-03-25.dahlia',
     typescript: true,
   });
 
