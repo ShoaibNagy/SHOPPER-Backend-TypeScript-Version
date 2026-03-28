@@ -9,7 +9,7 @@ import { logger } from './shared/middleware/logger';
 
 // Route imports — filled in as each module is built
 import { authRouter } from './modules/auth/auth.routes';
-// import { productRouter } from './modules/products/product.routes';
+import { productRouter } from './modules/products/product.routes';
 // import { userRouter } from './modules/users/user.routes';
 // import { orderRouter } from './modules/orders/order.routes';
 // import { cartRouter } from './modules/cart/cart.routes';
@@ -49,7 +49,7 @@ export const createApp = (): Application => {
 
   // ── API routes ───────────────────────────────────────────────────────────────
   app.use('/api/auth', authRouter);
-  // app.use('/api/products', productRouter);
+  app.use('/api/products', productRouter);
   // app.use('/api/users', userRouter);
   // app.use('/api/orders', orderRouter);
   // app.use('/api/cart', cartRouter);
