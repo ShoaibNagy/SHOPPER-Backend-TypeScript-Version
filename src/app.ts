@@ -14,7 +14,7 @@ import { userRouter } from './modules/users/user.routes';
 import { cartRouter } from './modules/cart/cart.routes';
 import { orderRouter } from './modules/orders/order.routes';
 import { paymentRouter } from './modules/payments/payment.routes';
-// import { reviewRouter } from './modules/reviews/review.routes';
+import { reviewRouter } from './modules/reviews/review.routes';
 
 export const createApp = (): Application => {
   const app = express();
@@ -54,7 +54,7 @@ export const createApp = (): Application => {
   app.use('/api/cart', cartRouter);
   app.use('/api/orders', orderRouter);
   app.use('/api/payments', paymentRouter);
-  // app.use('/api/reviews', reviewRouter);
+  app.use('/api/reviews', reviewRouter);
 
   // ── 404 handler ──────────────────────────────────────────────────────────────
   app.use((_req: Request, res: Response) => {
