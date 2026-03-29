@@ -1,7 +1,7 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { body } from 'express-validator';
 import { authenticate } from '../auth/auth.middleware';
-import { validate, mongoIdParam } from '../../shared/utils/validators';
+import { validate } from '../../shared/utils/validators';
 import {
   createPaymentIntentHandler,
   processRefundHandler,
@@ -41,8 +41,9 @@ router.use(authenticate);
 router.post(
   '/create-intent',
   [
-    mongoIdParam('orderId').withMessage('orderId must be a valid MongoDB ObjectId'),
-    body('orderId').notEmpty().withMessage('orderId is required'),
+    body('orderId')
+      .notEmpty().withMessage('orderId is required')
+      .isMongoId().withMessage('orderId must be a valid MongoDB ObjectId'),
   ],
   validate,
   createPaymentIntentHandler,
