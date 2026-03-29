@@ -11,6 +11,7 @@ import { logger } from './shared/middleware/logger';
 import { authRouter } from './modules/auth/auth.routes';
 import { productRouter } from './modules/products/product.routes';
 import { userRouter } from './modules/users/user.routes';
+import { cartRouter } from './modules/cart/cart.routes';
 // import { orderRouter } from './modules/orders/order.routes';
 // import { cartRouter } from './modules/cart/cart.routes';
 // import { paymentRouter } from './modules/payments/payment.routes';
@@ -51,8 +52,8 @@ export const createApp = (): Application => {
   app.use('/api/auth', authRouter);
   app.use('/api/products', productRouter);
   app.use('/api/users', userRouter);
+  app.use('/api/cart', cartRouter);
   // app.use('/api/orders', orderRouter);
-  // app.use('/api/cart', cartRouter);
   // app.use('/api/payments', paymentRouter);
   // app.use('/api/reviews', reviewRouter);
 
