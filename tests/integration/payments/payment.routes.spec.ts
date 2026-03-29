@@ -23,19 +23,23 @@ jest.mock('../../../src/config/env', () => ({
   },
 }));
 
-const mockPaymentIntentCreate  = jest.fn();
-const mockRefundCreate         = jest.fn();
-const mockWebhooksConstructEvent = jest.fn();
-
 jest.mock('../../../src/config/stripe', () => ({
   stripe: {
     getClient: jest.fn().mockReturnValue({
-      paymentIntents: { create: mockPaymentIntentCreate },
-      refunds:        { create: mockRefundCreate },
-      webhooks:       { constructEvent: mockWebhooksConstructEvent },
+      paymentIntents: { create: jest.fn() },
+      refunds:        { create: jest.fn() },
+      webhooks:       { constructEvent: jest.fn() },
     }),
   },
 }));
+
+import { stripe as stripeConfig } from '../../../src/config/stripe';
+
+const getMockStripe = () => stripeConfig.getClient() as unknown as {
+  paymentIntents: { create: jest.Mock };
+  refunds:        { create: jest.Mock };
+  webhooks:       { constructEvent: jest.Mock };
+};
 
 const app = createApp();
 
@@ -76,7 +80,7 @@ describe('Payment routes', () => {
   describe('POST /api/payments/create-intent', () => {
     it('returns 201 with clientSecret for a pending order', async () => {
       (Order.findById as jest.Mock).mockResolvedValue(makeMockOrder());
-      mockPaymentIntentCreate.mockResolvedValue({
+      getMockStripe().paymentIntents.create.mockResolvedValue({
         id:            'pi_test_123',
         client_secret: 'pi_test_123_secret',
         amount:        10000,
@@ -152,7 +156,7 @@ describe('Payment routes', () => {
       (Order.findById as jest.Mock).mockResolvedValue(
         makeMockOrder(OrderStatus.DELIVERED, USER_ID, 'pi_test_123'),
       );
-      mockRefundCreate.mockResolvedValue({
+      getMockStripe().refunds.create.mockResolvedValue({
         id:     're_test_123',
         amount: 10000,
         status: 'succeeded',
@@ -171,7 +175,7 @@ describe('Payment routes', () => {
       (Order.findById as jest.Mock).mockResolvedValue(
         makeMockOrder(OrderStatus.DELIVERED, USER_ID, 'pi_test_123'),
       );
-      mockRefundCreate.mockResolvedValue({
+      getMockStripe().refunds.create.mockResolvedValue({
         id:     're_test_456',
         amount: 10000,
         status: 'succeeded',
@@ -220,7 +224,7 @@ describe('Payment routes', () => {
   describe('POST /api/payments/webhook', () => {
     it('returns 200 for a valid payment_intent.succeeded event', async () => {
       const mockOrder = makeMockOrder(OrderStatus.PENDING);
-      mockWebhooksConstructEvent.mockReturnValue({
+      getMockStripe().webhooks.constructEvent.mockReturnValue({
         type: 'payment_intent.succeeded',
         data: { object: { id: 'pi_test_123', amount: 10000, last_payment_error: null } },
       });
@@ -246,7 +250,7 @@ describe('Payment routes', () => {
     });
 
     it('returns 400 when signature verification fails', async () => {
-      mockWebhooksConstructEvent.mockImplementation(() => {
+      getMockStripe().webhooks.constructEvent.mockImplementation(() => {
         throw new Error('No signatures found matching');
       });
 

@@ -16,20 +16,26 @@ jest.mock('../../../src/config/env', () => ({
   },
 }));
 
-// Mock Stripe client methods
-const mockPaymentIntentCreate = jest.fn();
-const mockRefundCreate = jest.fn();
-const mockWebhooksConstructEvent = jest.fn();
-
+// Mock Stripe client — functions defined inside the factory to avoid
+// the jest.mock() hoisting / const TDZ initialisation error
 jest.mock('../../../src/config/stripe', () => ({
   stripe: {
     getClient: jest.fn().mockReturnValue({
-      paymentIntents: { create: mockPaymentIntentCreate },
-      refunds:        { create: mockRefundCreate },
-      webhooks:       { constructEvent: mockWebhooksConstructEvent },
+      paymentIntents: { create: jest.fn() },
+      refunds:        { create: jest.fn() },
+      webhooks:       { constructEvent: jest.fn() },
     }),
   },
 }));
+
+// Grab live references to the mock functions after the factory has run
+import { stripe as stripeConfig } from '../../../src/config/stripe';
+
+const getMockStripe = () => stripeConfig.getClient() as unknown as {
+  paymentIntents: { create: jest.Mock };
+  refunds:        { create: jest.Mock };
+  webhooks:       { constructEvent: jest.Mock };
+};
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────
 const userId  = new mongoose.Types.ObjectId().toString();
@@ -59,7 +65,7 @@ describe('paymentService', () => {
     it('creates a PaymentIntent and persists the intent ID on the order', async () => {
       const mockOrder = makeMockOrder();
       (Order.findById as jest.Mock).mockResolvedValue(mockOrder);
-      mockPaymentIntentCreate.mockResolvedValue({
+      getMockStripe().paymentIntents.create.mockResolvedValue({
         id:            'pi_test_123',
         client_secret: 'pi_test_123_secret',
         amount:        10000,
@@ -70,10 +76,10 @@ describe('paymentService', () => {
 
       expect(result.paymentIntentId).toBe('pi_test_123');
       expect(result.clientSecret).toBe('pi_test_123_secret');
-      expect(result.amount).toBe(10000); // 100 * 100 cents
+      expect(result.amount).toBe(10000);
       expect(mockOrder.paymentIntentId).toBe('pi_test_123');
       expect(mockOrder.save).toHaveBeenCalledTimes(1);
-      expect(mockPaymentIntentCreate).toHaveBeenCalledWith(
+      expect(getMockStripe().paymentIntents.create).toHaveBeenCalledWith(
         expect.objectContaining({ amount: 10000, currency: 'usd' }),
       );
     });
@@ -115,7 +121,7 @@ describe('paymentService', () => {
     it('issues a refund and updates order status to REFUNDED', async () => {
       const mockOrder = makeMockOrder(OrderStatus.DELIVERED, userId, 'pi_test_123');
       (Order.findById as jest.Mock).mockResolvedValue(mockOrder);
-      mockRefundCreate.mockResolvedValue({
+      getMockStripe().refunds.create.mockResolvedValue({
         id:     're_test_123',
         amount: 10000,
         status: 'succeeded',
@@ -167,7 +173,9 @@ describe('paymentService', () => {
       const otherUserId = new mongoose.Types.ObjectId().toString();
       const mockOrder = makeMockOrder(OrderStatus.DELIVERED, otherUserId, 'pi_test_123');
       (Order.findById as jest.Mock).mockResolvedValue(mockOrder);
-      mockRefundCreate.mockResolvedValue({ id: 're_test_456', amount: 10000, status: 'succeeded' });
+      getMockStripe().refunds.create.mockResolvedValue({
+        id: 're_test_456', amount: 10000, status: 'succeeded',
+      });
 
       const result = await paymentService.processRefund(userId, { orderId }, true);
 
@@ -183,7 +191,7 @@ describe('paymentService', () => {
 
     it('confirms a PENDING order on payment_intent.succeeded', async () => {
       const mockOrder = makeMockOrder(OrderStatus.PENDING);
-      mockWebhooksConstructEvent.mockReturnValue({
+      getMockStripe().webhooks.constructEvent.mockReturnValue({
         type: 'payment_intent.succeeded',
         data: { object: { id: 'pi_test_123', amount: 10000, last_payment_error: null } },
       });
@@ -201,7 +209,7 @@ describe('paymentService', () => {
 
     it('is idempotent — does not double-confirm an already CONFIRMED order', async () => {
       const mockOrder = makeMockOrder(OrderStatus.CONFIRMED);
-      mockWebhooksConstructEvent.mockReturnValue({
+      getMockStripe().webhooks.constructEvent.mockReturnValue({
         type: 'payment_intent.succeeded',
         data: { object: { id: 'pi_test_123', amount: 10000 } },
       });
@@ -214,7 +222,7 @@ describe('paymentService', () => {
 
     it('emits payment.failed on payment_intent.payment_failed', async () => {
       const mockOrder = makeMockOrder(OrderStatus.PENDING);
-      mockWebhooksConstructEvent.mockReturnValue({
+      getMockStripe().webhooks.constructEvent.mockReturnValue({
         type: 'payment_intent.payment_failed',
         data: { object: { id: 'pi_test_123', last_payment_error: { message: 'Card declined' } } },
       });
@@ -229,7 +237,7 @@ describe('paymentService', () => {
     });
 
     it('throws 400 when the webhook signature is invalid', async () => {
-      mockWebhooksConstructEvent.mockImplementation(() => {
+      getMockStripe().webhooks.constructEvent.mockImplementation(() => {
         throw new Error('No signatures found matching');
       });
 
