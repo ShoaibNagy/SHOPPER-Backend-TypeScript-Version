@@ -4,12 +4,17 @@ import { redis } from './config/redis';
 import { stripe } from './config/stripe';
 import { env } from './config/env';
 import { logger } from './shared/middleware/logger';
+import { registerAllListeners } from './shared/events/listeners';
 
 const bootstrap = async (): Promise<void> => {
   // Connect to services
   await db.connect();
   await redis.connect();
   stripe.init();
+
+  // Register all eventBus listeners before the HTTP server starts
+  // so no events emitted during the first request are missed
+  registerAllListeners();
 
   // Start HTTP server
   const app = createApp();
