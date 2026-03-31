@@ -4,6 +4,9 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci
 COPY . .
+# Build compiles TypeScript to dist/ — used by the production stage.
+# The builder stage itself is also used directly by docker-compose.yml
+# for development (ts-node-dev runs against src/ with node_modules present).
 RUN npm run build
 
 # ── Production image ──────────────────────────────────────────────────────────
