@@ -1,0 +1,91 @@
+name: ecommerce
+
+services:
+
+  # ── Backend API ──────────────────────────────────────────────────────────────
+  api:
+    build:
+      context: .
+      target: builder          # uses the builder stage so src/ is present for ts-node-dev
+    command: npm run dev
+    ports:
+      - "4000:4000"
+    environment:
+      NODE_ENV: development
+      PORT: 4000
+      # MongoDB — points at the local mongo service below
+      MONGODB_USERNAME: ${MONGODB_USERNAME:-ecom_user}
+      MONGODB_PASSWORD: ${MONGODB_PASSWORD:-ecom_pass}
+      MONGODB_CLUSTER: mongo:27017
+      MONGODB_APP_NAME: Cluster0
+      # JWT
+      JWT_SECRET: ${JWT_SECRET:-dev_jwt_secret_change_in_production}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
+      # Bcrypt
+      BCRYPT_SALT_ROUNDS: ${BCRYPT_SALT_ROUNDS:-10}
+      # Stripe (leave blank locally unless testing payments)
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
+      # Redis — points at the local redis service below
+      REDIS_URL: redis://redis:6379
+      # File uploads
+      UPLOAD_DIR: upload/images
+      MAX_FILE_SIZE_MB: 5
+    volumes:
+      - ./src:/app/src                     # hot-reload: changes in src/ reflect immediately
+      - ./upload:/app/upload               # persist uploaded images across restarts
+      - /app/node_modules                  # keep container's node_modules isolated
+    depends_on:
+      mongo:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - ecom-network
+
+  # ── MongoDB ──────────────────────────────────────────────────────────────────
+  mongo:
+    image: mongo:7.0
+    ports:
+      - "27017:27017"           # exposed so Compass/Studio 3T can connect locally
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGODB_USERNAME:-ecom_user}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGODB_PASSWORD:-ecom_pass}
+      MONGO_INITDB_DATABASE: ecommerce
+    volumes:
+      - mongo-data:/data/db
+      - ./scripts/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks:
+      - ecom-network
+
+  # ── Redis ────────────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7.2-alpine
+    ports:
+      - "6379:6379"             # exposed so redis-cli can connect locally
+    command: redis-server --save 60 1 --loglevel warning
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+    networks:
+      - ecom-network
+
+volumes:
+  mongo-data:
+  redis-data:
+
+networks:
+  ecom-network:
+    driver: bridge
