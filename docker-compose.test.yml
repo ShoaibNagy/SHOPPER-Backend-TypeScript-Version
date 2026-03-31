@@ -1,0 +1,63 @@
+name: ecommerce-test
+
+# Usage: docker compose -f docker-compose.test.yml up --abort-on-container-exit
+# Runs the full test suite against an isolated DB then exits with jest's exit code.
+
+services:
+
+  test:
+    build:
+      context: .
+      target: builder
+    command: npm test
+    environment:
+      NODE_ENV: test
+      PORT: 4001
+      MONGODB_USERNAME: test_user
+      MONGODB_PASSWORD: test_pass
+      MONGODB_CLUSTER: mongo-test:27017
+      MONGODB_APP_NAME: TestCluster
+      JWT_SECRET: test_jwt_secret_at_least_32_characters
+      JWT_EXPIRES_IN: 1h
+      BCRYPT_SALT_ROUNDS: 4        # lower rounds = faster tests
+      STRIPE_SECRET_KEY: sk_test_dummy
+      STRIPE_WEBHOOK_SECRET: whsec_dummy
+      REDIS_URL: redis://redis-test:6379
+      UPLOAD_DIR: upload/images
+      MAX_FILE_SIZE_MB: 5
+    depends_on:
+      mongo-test:
+        condition: service_healthy
+      redis-test:
+        condition: service_healthy
+    networks:
+      - ecom-test-network
+
+  mongo-test:
+    image: mongo:7.0
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: test_user
+      MONGO_INITDB_ROOT_PASSWORD: test_pass
+      MONGO_INITDB_DATABASE: ecommerce_test
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks:
+      - ecom-test-network
+
+  redis-test:
+    image: redis:7.2-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - ecom-test-network
+
+networks:
+  ecom-test-network:
+    driver: bridge
