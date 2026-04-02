@@ -2,7 +2,9 @@ import express, { Application, Request, Response } from 'express';
 import cors from 'cors';
 import morgan from 'morgan';
 import path from 'path';
+import swaggerUi from 'swagger-ui-express';
 import { env } from './config/env';
+import { swaggerSpec } from './config/swagger';
 import { errorHandler } from './shared/middleware/errorHandler';
 import { apiLimiter } from './shared/middleware/rateLimiter';
 import { logger } from './shared/middleware/logger';
@@ -46,6 +48,18 @@ export const createApp = (): Application => {
       timestamp: new Date().toISOString(),
     });
   });
+
+  // ── API docs (development only) ───────────────────────────────────────────────
+  if (env.node.isDev) {
+    app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+      customSiteTitle: 'Shopper API Docs',
+      swaggerOptions: { persistAuthorization: true },
+    }));
+    app.get('/api/docs.json', (_req: Request, res: Response) => {
+      res.setHeader('Content-Type', 'application/json');
+      res.send(swaggerSpec);
+    });
+  }
 
   // ── API routes ───────────────────────────────────────────────────────────────
   app.use('/api/auth', authRouter);
