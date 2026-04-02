@@ -6,6 +6,7 @@ import { apiLimiter } from '../../shared/middleware/rateLimiter';
 import {
   mongoIdParam,
   paginationQueryValidators,
+  roleQueryValidator,
   validate,
 } from '../../shared/utils/validators';
 import {
@@ -99,7 +100,7 @@ router.get(
   authorize(UserRole.ADMIN),
   apiLimiter,
   paginationQueryValidators,
-  query('role').optional().isIn(Object.values(UserRole)).withMessage('Invalid role'),
+  roleQueryValidator,
   query('isActive').optional().isBoolean().withMessage('isActive must be a boolean'),
   validate,
   getAllUsersHandler,

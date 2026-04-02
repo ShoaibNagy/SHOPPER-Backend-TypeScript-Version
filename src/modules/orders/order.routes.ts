@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { body, query } from 'express-validator';
 import { authenticate, authorize } from '../auth/auth.middleware';
 import { UserRole } from '../auth/auth.types';
-import { mongoIdParam, paginationQueryValidators, validate } from '../../shared/utils/validators';
+import { mongoIdParam, paginationQueryValidators, orderStatusQueryValidator, validate } from '../../shared/utils/validators';
 import { OrderStatus } from './order.types';
 import {
   placeOrderHandler,
@@ -29,11 +29,6 @@ const shippingAddressValidators = [
   body('shippingAddress.postalCode').trim().notEmpty().withMessage('Postal code is required'),
   body('shippingAddress.country').trim().notEmpty().withMessage('Country is required'),
 ];
-
-const statusQueryValidator = query('status')
-  .optional()
-  .isIn(Object.values(OrderStatus))
-  .withMessage(`status must be one of: ${Object.values(OrderStatus).join(', ')}`);
 
 const statusBodyValidator = body('status')
   .notEmpty()
@@ -63,7 +58,7 @@ router.post(
 router.get(
   '/my',
   paginationQueryValidators,
-  statusQueryValidator,
+  orderStatusQueryValidator,
   validate,
   getMyOrdersHandler,
 );
@@ -103,7 +98,7 @@ router.get(
   '/',
   authorize(UserRole.ADMIN),
   paginationQueryValidators,
-  statusQueryValidator,
+  orderStatusQueryValidator,
   query('userId').optional().isMongoId().withMessage('userId must be a valid MongoDB ObjectId'),
   validate,
   getAllOrdersHandler,

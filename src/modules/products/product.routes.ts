@@ -10,6 +10,7 @@ import {
   createProductValidators,
   mongoIdParam,
   paginationQueryValidators,
+  categoryQueryValidator,
   validate,
 } from '../../shared/utils/validators';
 import { body, query } from 'express-validator';
@@ -78,9 +79,9 @@ router.get(
   '/',
   publicLimiter,
   paginationQueryValidators,
-  query('category').optional().isIn(['men', 'women', 'kids']),
-  query('minPrice').optional().isFloat({ min: 0 }),
-  query('maxPrice').optional().isFloat({ min: 0 }),
+  categoryQueryValidator,
+  query('minPrice').optional().isFloat({ min: 0 }).withMessage('minPrice must be a non-negative number'),
+  query('maxPrice').optional().isFloat({ min: 0 }).withMessage('maxPrice must be a non-negative number'),
   validate,
   getAllProductsHandler,
 );
