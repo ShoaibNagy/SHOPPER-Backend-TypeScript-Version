@@ -51,7 +51,7 @@ export const createProductValidators = [
   body('image')
     .trim()
     .notEmpty().withMessage('Product image URL is required')
-    .isURL().withMessage('Product image must be a valid URL'),
+    .isURL({ require_tld: false }).withMessage('Product image must be a valid URL'),
   body('category')
     .trim()
     .notEmpty().withMessage('Category is required')
