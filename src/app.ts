@@ -49,6 +49,17 @@ export const createApp = (): Application => {
     });
   });
 
+  // ── Root route ──────────────────────────────────────────────────────────────
+  app.get('/api', (_req: Request, res: Response) => {
+    res.json({
+      success: true,
+      message: 'Shopper API',
+      version: '1.0.0',
+      docs: `http://localhost:${env.node.port}/api/docs`,
+      health: `http://localhost:${env.node.port}/health`,
+    });
+  });
+
   // ── API docs (development only) ───────────────────────────────────────────────
   if (env.node.isDev) {
     app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
